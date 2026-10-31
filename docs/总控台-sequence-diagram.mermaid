@@ -1,0 +1,164 @@
+%% 「小王老师」总控台 — 时序图（摘自 docs/实现设计-小王老师总控.md §4）
+%% 主线 A：一句话触发多步工具链的完整闭环（US-1）
+sequenceDiagram
+    autonumber
+    actor U as 用户
+    participant MW as MainWindow(Qt主线程)
+    participant AW as AgentWorker(QThread)
+    participant MB as MessageBuilder
+    participant ER as EngineRouter
+    participant DS as DeepSeekClient
+    participant TR as ToolRegistry
+    participant T as Tool(如 search_bilibili)
+    participant SG as SafetyGate
+    participant CG as ConfirmationGate
+    participant NS as NoteStore
+    participant TW as TTSWorker
+
+    U->>MW: 输入「帮我搜集抖音播放量最高的 AI 视频」+ Enter
+    MW->>AW: start(user_text, ctx)
+    Note over MW: 输入框禁用，「■停止」启用
+
+    AW->>MB: add_system(SYSTEM_PROMPT + 长期记忆段)
+    AW->>MB: add_user(user_text)
+    AW->>MB: to_api_payload()
+    MB->>MB: assert_no_reasoning(payload)
+    MB-->>AW: payload
+
+    loop 最多 max_rounds=8 轮
+        AW->>ER: chat(payload, tools=openai_schemas())
+        ER->>DS: POST /chat/completions (thinking=disabled)
+        DS-->>ER: {choices[0].message, reasoning_content?, finish_reason}
+        ER->>MB: sanitize_assistant_message(msg)
+        Note over MB: 只保留 role/content/tool_calls<br/>reasoning_content → LLMResponse.reasoning(仅 UI)
+        ER-->>AW: LLMResponse
+
+        alt finish_reason == "stop"
+            AW->>MB: add_assistant(resp)
+            AW-->>MW: sig_token(累计 content 流式/整段)
+            AW-->>MW: sig_status("第 N/8 轮完成")
+        else finish_reason == "tool_calls"
+            AW->>MB: add_assistant(resp)
+            AW-->>MW: sig_status(工具名 + 轮次)
+            loop 每个 tool_call
+                AW-->>MW: sig_tool_started({id,name,arguments})
+                MW->>MW: TraceView 新增 ⟳ 行
+                AW->>TR: invoke(ToolCall, ctx)
+                TR->>SG: is_destructive(name)
+
+                alt 破坏性工具(close_app/delete_file)
+                    SG->>SG: resolve_targets(列出全部绝对路径/PID)
+                    SG->>CG: ask(ConfirmRequest, timeout=300)
+                    CG-->>MW: sig_confirm_needed(req)
+                    MW->>U: QMessageBox(逐行路径, 按钮="删除这 3 个文件")
+                    U-->>MW: 确认 / 取消
+                    MW->>CG: resolve(True/False)
+                    CG-->>SG: result
+                    alt 用户取消
+                        SG-->>TR: ToolResult(ok=False, cancelled=True, error="用户取消了操作")
+                    else 确认
+                        SG->>T: fn(**arguments)
+                        T-->>SG: 结果字符串
+                        SG-->>TR: ToolResult(ok=True)
+                    end
+                else 非破坏性
+                    TR->>T: fn(**arguments)
+                    T-->>TR: 结果字符串
+                end
+
+                TR-->>AW: ToolResult(含 elapsed_ms)
+                AW-->>MW: sig_tool_finished({id,ok,text,elapsed,error})
+                MW->>MW: TraceView 置 ✓/✗，写入参/返回/耗时
+                AW->>MB: add_tool_results([result])
+            end
+            AW->>MB: to_api_payload()
+            MB->>MB: assert_no_reasoning(payload)
+        end
+        alt ctx.is_cancelled()
+            AW-->>MW: sig_finished({answer:"已停止", partial:trace})
+        end
+    end
+
+    Note over AW: 循环结束（stop 或达上限）
+
+    alt 本轮调用过 ingest_note
+        AW-->>MW: sig_finished(含 ingested_note_ids)
+        MW->>MW: 对话区下方渲染「已沉淀进知识库：N 条」+ [撤回] 按钮
+        U-->>MW: 点「撤回」
+        MW->>NS: delete(note_id)
+        NS-->>MW: ok
+    end
+
+    AW->>AW: memory.auto_extract(本轮) → 命中则 remember()
+    AW-->>MW: sig_finished(TurnOutcome)
+    MW->>MW: ChatView 渲染最终回答（表格/等宽块）
+    MW->>TW: speak(answer)  【>200字只播摘要，全文照常显示】
+    TW-->>U: 🔊 播报
+    MW->>MW: 输入框恢复可用
+
+
+%% ────────────────────────────────────────────────────────────
+%% 主线 B：破坏性操作触发确认门并恢复执行（US-3 / US-4）
+sequenceDiagram
+    autonumber
+    actor U as 用户
+    participant MW as MainWindow(主线程)
+    participant AW as AgentWorker(QThread)
+    participant TR as ToolRegistry
+    participant SG as SafetyGate
+    participant PP as PathPolicy
+    participant CG as ConfirmationGate
+    participant SYS as system.close_app
+    participant MB as MessageBuilder
+    participant ER as EngineRouter
+
+    U->>MW: 「帮我把飞书关了」
+    MW->>AW: start()
+    AW->>ER: chat(payload)
+    ER-->>AW: tool_calls=[close_app(name="飞书")]
+    AW->>TR: invoke(close_app)
+    TR->>SG: is_destructive("close_app") → True
+
+    SG->>SYS: resolve_app("飞书") → (Feishu.exe, "飞书")
+    SG->>SG: 扫描 psutil 命中进程 → targets=[{pid:1201,name:Feishu.exe}, ...]
+    Note over SG: close_app 会 kill 所有同名进程<br/>→ 必须列出全部 PID，不能只报个数
+
+    SG->>PP: is_sensitive(exe_path) / is_allowed(path)
+    PP-->>SG: {sensitive: True, dir: "D:\\飞书"}
+
+    alt trust_mode == False（默认，Q3）
+        SG->>CG: ask(ConfirmRequest{action_text:"结束这 3 个进程", targets:[...], warnings:["涉及非系统目录 D:\\飞书"]})
+        CG-->>MW: sig_confirm_needed(req)  【跨线程 queued】
+        Note over AW: AgentWorker 阻塞在 Event.wait(timeout=300)<br/>主线程不受影响，UI 可滚动可点
+        MW->>U: QMessageBox：将结束以下进程（3 个）<br/>1. Feishu.exe PID 1201 D:\飞书\Feishu\app\Feishu.exe<br/>按钮：[结束这 3 个进程] [取消]
+        U-->>MW: 点「结束这 3 个进程」
+        MW->>CG: resolve({"approved": True})
+        CG-->>SG: approved
+    else trust_mode == True
+        SG->>PP: is_sensitive(path)
+        alt 命中敏感目录(Desktop/Documents/Downloads)
+            SG->>CG: ask(二次提示，仍弹)
+            CG-->>MW: sig_confirm_needed
+            U-->>MW: 确认
+            MW->>CG: resolve(True)
+        else 非敏感目录
+            Note over SG: 跳过弹窗，直接执行
+        end
+    end
+
+    alt approved
+        SG->>SYS: close_app("飞书")
+        SYS-->>SG: "已关闭飞书（3个进程）"
+        SG-->>TR: ToolResult(ok=True, text=..., targets=[...])
+    else 取消 / 超时
+        SG-->>TR: ToolResult(ok=False, cancelled=True, error="用户取消了操作，未做任何改动")
+    end
+
+    TR-->>AW: ToolResult
+    AW-->>MW: sig_tool_finished(...)
+    AW->>MB: add_tool_results([result])
+    MB->>MB: assert_no_reasoning()
+    AW->>ER: chat(payload)  【把"取消/已关闭"回灌给模型】
+    ER-->>AW: content="好的，飞书已经关掉了：Feishu.exe ×3（PID 1201/1330/1477）" / "好的，我没动它。"
+    AW-->>MW: sig_finished(...)
+    MW->>U: 对话区渲染 + 回报完整路径/PID

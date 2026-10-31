@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JARVIS HUD</title>
+  <link rel="stylesheet" href="css/hud.css" />
+</head>
+<body>
+  <div id="hud">
+    <!-- 顶栏：引擎徽标 + 系统状态 -->
+    <div id="topbar">
+      <div id="engineBadge" class="badge">引擎 · --</div>
+      <div id="sysStatus" class="sys">
+        <span data-k="cpu">CPU --%</span>
+        <span data-k="mem">MEM --%</span>
+        <span data-k="net">NET ↓-- ↑--</span>
+        <span data-k="battery">BAT --%</span>
+      </div>
+    </div>
+
+    <!-- 中央舞台：四态核心环 + 字幕 -->
+    <div id="stage">
+      <canvas id="coreCanvas"></canvas>
+      <div id="subtitle"></div>
+    </div>
+
+    <!-- 3D 演示层（Three.js，离线优先；缺失则优雅降级） -->
+    <div id="demoLayer" class="hidden">
+      <canvas id="demoCanvas"></canvas>
+      <div id="demoHint">拖拽旋转 · 滚轮缩放 · 双击退出</div>
+    </div>
+
+    <!-- 底栏：状态 + 文字输入通道（老用户仍可键盘） -->
+    <div id="bottombar">
+      <div id="micState" class="mic">待命 · Hey Jarvis</div>
+      <input id="textInput" type="text" placeholder="或在此输入指令后回车…" />
+    </div>
+  </div>
+
+  <!-- 桥脚本：按 PARTS 顺序加载，后文件可用前文件变量 -->
+  <script src="js/boot.js"></script>
+</body>
+</html>

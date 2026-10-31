@@ -1,0 +1,17 @@
+ollama:
+  base_url: "http://localhost:11434"
+  extract_model: "qwen3-14b"      # 本地抽取/结构化（仅本地，不回升云端）
+  embed_model: "bge-m3"           # 本地嵌入
+
+deepseek:
+  base_url: "https://api.deepseek.com"
+  model: "deepseek-flash"         # 仅用于摘要（PRD §9 已核实模型名）
+  api_key_env: "DEEPSEEK_API_KEY" # 从环境变量读取，不落明文
+  use_for: ["summary"]
+
+vectorstore:
+  type: "chroma"                  # 生产用 chroma；沙箱若无 chromadb 会自动回退本地库
+  persist_dir: "D:/Desktop/MyKnowledge/chroma"
+
+storage:
+  raw_dir: "D:/Desktop/MyKnowledge/raw"

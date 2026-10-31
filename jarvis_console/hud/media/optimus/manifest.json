@@ -1,0 +1,8 @@
+{
+  "id": "optimus",
+  "label": "Optimus 行走",
+  "description": "人形躯干 + 头 + 双臂 + 双腿，双臂与双腿交替摆动模拟步态。",
+  "script": "demos/optimus.js",
+  "entry": "optimus",
+  "keywords": ["人形", "机器人", "行走", "特斯拉", "通用人形"]
+}

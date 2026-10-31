@@ -1,0 +1,8 @@
+{
+  "id": "machine",
+  "label": "机器拆解",
+  "description": "可旋转缩放的机器人核心，分解为躯干、头部、双臂与底座环。",
+  "script": "demos/machine.js",
+  "entry": "machine",
+  "keywords": ["机器人", "拆解", "机械", "核心"]
+}

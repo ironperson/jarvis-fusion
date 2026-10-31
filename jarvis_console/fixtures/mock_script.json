@@ -1,0 +1,90 @@
+[
+  {
+    "message": {
+      "role": "assistant",
+      "content": "说明一下：抖音站内搜索本版没开，我用 B站 + 网页搜索寻找 AI 相关高播放视频。",
+      "reasoning_content": "这段思考只供 UI，绝不能回写协议。",
+      "tool_calls": [
+        {
+          "id": "call_bili_1",
+          "type": "function",
+          "function": {
+            "name": "search_bilibili",
+            "arguments": "{\"keyword\":\"AI\",\"order\":\"click\",\"limit\":5}"
+          }
+        },
+        {
+          "id": "call_web_1",
+          "type": "function",
+          "function": {
+            "name": "web_search",
+            "arguments": "{\"query\":\"AI 高播放 视频\",\"limit\":3}"
+          }
+        }
+      ]
+    },
+    "finish_reason": "tool_calls",
+    "usage": {"prompt_tokens": 120, "completion_tokens": 40}
+  },
+  {
+    "message": {
+      "role": "assistant",
+      "content": "已找到候选，继续读取两条详情。",
+      "reasoning_content": "仍然不能回写。",
+      "tool_calls": [
+        {
+          "id": "call_page_1",
+          "type": "function",
+          "function": {
+            "name": "fetch_page",
+            "arguments": "{\"url\":\"https://www.bilibili.com/video/BV1AI0000001\",\"max_chars\":2000}"
+          }
+        },
+        {
+          "id": "call_page_2",
+          "type": "function",
+          "function": {
+            "name": "fetch_page",
+            "arguments": "{\"url\":\"https://www.bilibili.com/video/BV1AI0000002\",\"max_chars\":2000}"
+          }
+        }
+      ]
+    },
+    "finish_reason": "tool_calls",
+    "usage": {"prompt_tokens": 300, "completion_tokens": 55}
+  },
+  {
+    "message": {
+      "role": "assistant",
+      "content": "详情已整理，正在落一份 Markdown 并沉淀索引。",
+      "tool_calls": [
+        {
+          "id": "call_write_1",
+          "type": "function",
+          "function": {
+            "name": "write_file",
+            "arguments": "{\"path\":\"AI短视频清单.md\",\"content\":\"# AI 高播放视频清单\\n\\n| 标题 | UP主 | 播放量 | 链接 |\\n|---|---|---:|---|\\n| AI Agent 实战 | 小王科技 | 12800000 | https://www.bilibili.com/video/BV1AI0000001 |\\n| 本地大模型指南 | 数据工坊 | 8600000 | https://www.bilibili.com/video/BV1AI0000002 |\",\"overwrite\":true}"
+          }
+        },
+        {
+          "id": "call_ingest_1",
+          "type": "function",
+          "function": {
+            "name": "ingest_note",
+            "arguments": "{\"title\":\"AI 高播放视频资料索引\",\"content\":\"B站与网页搜索得到的 AI 高播放视频候选：AI Agent 实战、本地大模型指南。\",\"source\":\"jarvis_console\",\"tags\":[\"AI\",\"视频\"]}"
+          }
+        }
+      ]
+    },
+    "finish_reason": "tool_calls",
+    "usage": {"prompt_tokens": 520, "completion_tokens": 90}
+  },
+  {
+    "message": {
+      "role": "assistant",
+      "content": "已完成。说明：抖音站内搜索本版没开，本次来源是 B站与网页搜索。清单已按播放量整理并写入完整路径，资料索引也已沉淀进知识库；可在回复下方撤回沉淀。"
+    },
+    "finish_reason": "stop",
+    "usage": {"prompt_tokens": 760, "completion_tokens": 75}
+  }
+]

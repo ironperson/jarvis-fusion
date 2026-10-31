@@ -1,0 +1,8 @@
+{
+  "id": "roadster",
+  "label": "Roadster 悬停",
+  "description": "悬浮车体 + 座舱 + 四轮与底部反重力辉光，呈现悬浮呼吸动效。",
+  "script": "demos/roadster.js",
+  "entry": "roadster",
+  "keywords": ["跑车", "特斯拉", "悬停", "反重力"]
+}

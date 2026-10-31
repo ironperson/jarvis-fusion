@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "generated_by": "T14 打包与首启下载（融合版 JARVIS v1）",
+  "sha256_verified": false,
+  "notes": "本清单由 T14 生成。重要说明：所有 sha256 字段若为 \"__VERIFY__\" 均为占位符，发布前必须逐一核对真实值（见各包 verify_note）。下载器遇到占位符不会拒绝，但会打印实际计算的 sha256 供你记录。本地模型根目录由 jarvis_console.paths.MODELS_DIR 决定（打包后位于安装目录内的 jarvis_console/models）。规划文档估算约 1GB，但按下列真实可用模型实测下载量约 0.42GB（唤醒词 KWS 17.6MB + SenseVoice int8 ~290MB + Piper en-GB ~95MB，其余为冗余/备份模型）；若后续加入更高保真度模型，体积会更大。声纹（resemblyzer）无需单独下载，已随 pip 包内置。三个包的 URL 均已实测可下载（2026-10-30）；wakeword 的 sha256 已实测核对，asr/piper 仍为 __VERIFY__ 占位。",
+  "packages": [
+    {
+      "id": "wakeword",
+      "purpose": "离线唤醒词 spotting（关键词 \"Hey Jarvis\"），sherpa-onnx KWS",
+      "dest": "wakeword",
+      "required": true,
+      "expected": ["encoder.onnx", "decoder.onnx", "joiner.onnx", "tokens.txt"],
+      "files": [],
+      "archive": {
+        "name": "sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2",
+        "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/kws-models/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01.tar.bz2",
+        "sha256": "f170013b4716e41b62b9bfd809687c207cef798ef9bc6534d524e17af9b6561a",
+        "size_mb": 17.6
+      },
+      "post_extract": "wakeword",
+      "verify_note": "KWS 模型通常按关键词训练，公开模型未必直接叫 \"Hey Jarvis\"，但仍可不训练就跑：用这个预训练 KWS 模型 + 一个 keywords.txt，把 \"Hey Jarvis\" 作为关键词即可。下载解压后 post_extract 钩子会自动把官方长命名（encoder-epoch-12-...onnx）归一成 encoder/decoder/joiner.onnx（优先 int8）；jarvis_console/speech/wake.py 首次加载时会用 tokens.txt 自动把 \"Hey Jarvis\" 切成官方风格 token 并生成 keywords.txt（官方包自带的示例 keywords.txt 会被备份为 keywords.official.txt）。也可用 tools/kws_make_keywords.py 手动生成（--dry-run 预览），或跑一键脚本 tools/kws_setup.py（下载+解压+生成+加载自测全包）。详尽步骤（路线 A 免训练 / 路线 B 自训 / 调参 / FAQ）见 docs/唤醒词自训教程.md。若该模型词表切分不出 \"JARVIS\"，则走教程路线 B 自训。注意：网传的 gigaspeech-3.4M-2023-12-09 文件名在官方 release 不存在（404），请用上面这个（URL 与 sha256 均已实测核对）。国内网络可在 URL 前加 https://ghproxy.net/ 加速。"
+    },
+    {
+      "id": "asr",
+      "purpose": "SenseVoice 离线流式 ASR（中文/英/日/韩/粤），sherpa-onnx int8 导出",
+      "dest": "asr/sensevoice",
+      "required": true,
+      "expected": ["model.onnx", "tokens.txt"],
+      "files": [],
+      "archive": {
+        "name": "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2",
+        "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17.tar.bz2",
+        "sha256": "__VERIFY__",
+        "size_mb": 95
+      },
+      "verify_note": "这是 k2-fsa 官方发布的 SenseVoice sherpa-onnx 导出（稳定公开源）。下载为 tar.bz2，向导会自动解压并铺平到 models/asr/sensevoice/（含 model.onnx 与 tokens.txt，与 speech/asr.py 的加载约定一致）。URL 稳定，但 sha256 须发布前在 GitHub Release 页面或下载后用 certutil -hashfile 核对后填入本清单。"
+    },
+    {
+      "id": "piper",
+      "purpose": "英式 TTS 音色（可选合规后端，默认仍用 edge-tts en-GB），Piper onnx 模型 + 配置",
+      "dest": "piper",
+      "required": false,
+      "expected": ["en_GB-vctk-medium.onnx", "en_GB-vctk-medium.onnx.json"],
+      "files": [
+        {
+          "name": "en_GB-vctk-medium.onnx",
+          "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/en_GB-vctk-medium/en_GB-vctk-medium.onnx",
+          "sha256": "__VERIFY__",
+          "size_mb": 95
+        },
+        {
+          "name": "en_GB-vctk-medium.onnx.json",
+          "url": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/en_GB-vctk-medium/en_GB-vctk-medium.onnx.json",
+          "sha256": "__VERIFY__",
+          "size_mb": 0.05
+        }
+      ],
+      "archive": null,
+      "verify_note": "Piper 英式嗓音（en-GB），来自 HuggingFace rhasspy/piper-voices（稳定公开源）。speech/tts.py 的 PiperBackend 需要 .onnx 与同名的 .onnx.json 配置文件，两者都要下载到 models/piper/。该包 required=false：默认 TTS 走 edge-tts，仅在控制台切换到 Piper 后端时才必需。sha256 须发布前核对。"
+    }
+  ]
+}

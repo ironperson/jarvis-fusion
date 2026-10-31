@@ -1,0 +1,166 @@
+classDiagram
+    %% ===== 数据契约（零 Qt 依赖，可跨线程/跨进程 JSON 序列化）=====
+    class WakeEvent {
+        +string type = "wake"
+        +float timestamp
+        +float confidence
+        +string clip_ref
+    }
+    class ASRResult {
+        +string type = "asr"
+        +bool is_final
+        +string text
+        +float confidence
+        +int start_ms
+        +int end_ms
+    }
+    class BargeInEvent {
+        +string type = "barge_in"
+        +float energy
+        +float timestamp
+    }
+    class VoiceprintEnroll {
+        +string owner_id
+        +list~float~ embedding
+        +string embedding_path
+        +string created_at
+        +string status
+    }
+    class VoiceprintVerify {
+        +bool match
+        +float score
+    }
+    class BrainRequest {
+        +list~dict~ messages
+        +list~dict~ tools
+        +string engine
+        +int timeout
+    }
+    class BrainResponse {
+        +string content
+        +list~ToolCall~ tool_calls
+        +string reasoning
+        +string finish_reason
+        +string engine
+        +int prompt_tokens
+        +int completion_tokens
+    }
+    class HUDState {
+        +string state
+        +string subtitle
+        +string engine
+        +SysStatus sys
+        +string demo
+        +string skin
+    }
+    class SysStatus {
+        +float cpu
+        +float mem
+        +float net_up
+        +float net_down
+        +float battery
+        +bool on_ac
+    }
+    class PluginSpec {
+        +string name
+        +bool enabled
+        +list~string~ requires
+        +string description
+    }
+    class SkillSpec {
+        +string name
+        +string description
+        +dict parameters
+        +string code_path
+        +string status
+        +string sha256
+    }
+
+    %% ===== 服务/控制类 =====
+    class WakeEngine {
+        +load_model_safely()
+        +start(listener)
+        +stop()
+    }
+    class ASRStream {
+        +start()
+        +feed(audio)
+        +stop()
+    }
+    class Voiceprint {
+        +enroll(samples) VoiceprintEnroll
+        +verify(clip) VoiceprintVerify
+    }
+    class AudioService {
+        +start()
+        +stop()
+        -WakeEngine wake
+        -ASRStream asr
+        -VAD vad
+    }
+    class VoiceController {
+        +run()
+        -AudioService audio
+        -AgentWorker agent
+        -TTSWorker tts
+        +on_wake()
+        +on_asr_final()
+        +on_barge_in()
+        -state_machine()
+    }
+    class EngineRouter {
+        +list~EngineSpec~ engines
+        +select(provider)
+        +chat(req) BrainResponse
+        +auto_fallback()
+    }
+    class OpenAICompatibleClient {
+        +name
+        +chat(req) BrainResponse
+        +available()
+    }
+    class HUD {
+        +QWebEngineView view
+        +QWebSocketServer bridge
+        +push(state)
+        +on_message(msg)
+    }
+    class SkinRegistry {
+        +dict skins
+        +map_state_to_skin(state)
+    }
+    class PluginManager {
+        +sync_enabled()
+        +list_specs() list~PluginSpec~
+    }
+    class SkillManager {
+        +generate(intent) SkillSpec
+        +validate(spec) bool
+        +install(spec) bool
+    }
+    class ReminderScheduler {
+        +add(reminder)
+        +cancel(id)
+        +tick()
+    }
+    class StatusMonitor {
+        +sample() SysStatus
+    }
+
+    %% ===== 关系 =====
+    AudioService --> WakeEngine : owns
+    AudioService --> ASRStream : owns
+    VoiceController --> AudioService : drives
+    VoiceController --> AgentWorker : spawns
+    VoiceController --> TTSWorker : spawns
+    VoiceController --> HUD : push HUDState
+    EngineRouter --> OpenAICompatibleClient : routes N
+    OpenAICompatibleClient ..|> BrainResponse : produces
+    HUD --> SkinRegistry : reads skins
+    SkillManager --> PluginSpec : reuses @tool
+    ReminderScheduler ..> TTSWorker : triggers
+    StatusMonitor ..> HUD : SysStatus
+    VoiceprintEnroll <.. Voiceprint : creates
+    VoiceprintVerify <.. Voiceprint : returns
+    HUDState *-- SysStatus : contains
+    BrainRequest ..> BrainResponse : maps to

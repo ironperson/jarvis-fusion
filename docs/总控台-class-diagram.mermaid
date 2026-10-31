@@ -1,0 +1,233 @@
+%% 「小王老师」总控台 — 类图（摘自 docs/实现设计-小王老师总控.md §3）
+classDiagram
+    class ToolCall {
+        +str id
+        +str name
+        +dict arguments
+        +from_api(dict) ToolCall
+        +to_api() dict
+    }
+
+    class ToolResult {
+        +str tool_call_id
+        +str name
+        +bool ok
+        +str text
+        +dict data
+        +str error
+        +float elapsed_ms
+        +bool cancelled
+        +to_tool_message() dict
+    }
+
+    class LLMResponse {
+        +str content
+        +list tool_calls
+        +str reasoning
+        +str finish_reason
+        +str engine
+        +int prompt_tokens
+        +int completion_tokens
+        +bool had_reasoning
+    }
+
+    class MessageBuilder {
+        +list messages
+        +add_system(text) void
+        +add_user(text) void
+        +add_assistant(resp) void
+        +add_tool_results(results) void
+        +sanitize_assistant_message(dict) dict
+        +assert_no_reasoning(list) void
+        +to_api_payload() list
+        +snapshot() list
+    }
+
+    class LLMClient {
+        <<abstract>>
+        +str name
+        +chat(messages, tools, timeout) LLMResponse
+        +available() bool
+    }
+    class DeepSeekClient {
+        +str base_url
+        +str model
+        +str api_key
+        +bool disable_thinking
+        +chat(messages, tools, timeout) LLMResponse
+        +_post(payload) dict
+    }
+    class OllamaClient {
+        +str base_url
+        +str model
+        +chat(messages, tools, timeout) LLMResponse
+    }
+    class MockLLMClient {
+        +list script
+        +int cursor
+        +chat(messages, tools, timeout) LLMResponse
+    }
+    class EngineRouter {
+        +LLMClient primary
+        +LLMClient fallback
+        +LLMClient active
+        +int fail_streak
+        +chat(messages, tools) LLMResponse
+        +on_failure(err) void
+    }
+
+    LLMClient <|-- DeepSeekClient
+    LLMClient <|-- OllamaClient
+    LLMClient <|-- MockLLMClient
+    EngineRouter o-- LLMClient : primary/fallback
+
+    class ToolSpec {
+        +str name
+        +str description
+        +dict parameters
+        +str category
+        +bool destructive
+        +bool enabled
+        +callable fn
+        +to_openai_schema() dict
+    }
+    class ToolRegistry {
+        +dict _tools
+        +register(name, description, category, destructive, enabled) decorator
+        +get(name) ToolSpec
+        +enabled_tools() list
+        +openai_schemas() list
+        +invoke(ToolCall, ctx) ToolResult
+        +names() list
+    }
+    ToolRegistry o-- ToolSpec : 1..*
+
+    class TurnContext {
+        +str turn_id
+        +str user_text
+        +bool cancelled
+        +bool trust_mode
+        +SafetyGate gate
+        +list trace
+        +dict memory_hits
+        +cancel() void
+        +is_cancelled() bool
+    }
+
+    class AgentLoop {
+        +ToolRegistry registry
+        +EngineRouter router
+        +MemoryStore memory
+        +MessageBuilder builder
+        +int max_rounds
+        +run(user_text, ctx) TurnOutcome
+        +_execute_tool(ToolCall, ctx) ToolResult
+    }
+    class TurnOutcome {
+        +str answer
+        +list trace
+        +int rounds
+        +list ingested_note_ids
+        +str engine
+        +bool reached_limit
+        +str error
+    }
+
+    AgentLoop o-- ToolRegistry
+    AgentLoop o-- EngineRouter
+    AgentLoop o-- MessageBuilder
+    AgentLoop o-- TurnContext
+    AgentLoop ..> TurnOutcome : produces
+    MessageBuilder ..> LLMResponse : consumes
+    ToolCall <.. LLMResponse : contains
+
+    class SafetyGate {
+        +bool trust_mode
+        +set destructive_tools
+        +list sensitive_dirs
+        +ConfirmationGate confirm_gate
+        +is_destructive(name) bool
+        +resolve_targets(name, args) list
+        +request(name, args, ctx) bool
+        +describe(name, args) str
+    }
+    class PathPolicy {
+        +list allowed_roots
+        +list sensitive_dirs
+        +normalize(path) Path
+        +is_allowed(path) bool
+        +is_sensitive(path) bool
+        +violation_hint(path) str
+    }
+    class ConfirmationGate {
+        +Event _event
+        +object _result
+        +ConfirmRequest pending
+        +ask(req, timeout) object
+        +resolve(result) void
+    }
+    class ConfirmRequest {
+        +str tool_name
+        +str action_text
+        +list targets
+        +list warnings
+        +str detail
+    }
+    SafetyGate o-- PathPolicy
+    SafetyGate o-- ConfirmationGate
+    ConfirmationGate ..> ConfirmRequest
+
+    class MemoryStore {
+        +Path db_path
+        +init_schema() void
+        +remember(key, value, category, source) str
+        +recall(query, top_k) list
+        +forget(memory_id) bool
+        +recent(limit) list
+        +_embed(text) list
+    }
+    class SessionStore {
+        +Path db_path
+        +new_session() str
+        +append_message(session_id, role, content) void
+        +load_recent(session_id, limit) list
+        +list_sessions(limit) list
+    }
+    MemoryStore ..> SessionStore : 同库不同表
+
+    class NoteStore {
+        +dict settings
+        +count() int
+        +search(query, top_k) list
+        +ingest(title, content, source, tags, url) dict
+        +delete(note_id) bool
+        +_note_id(url) str
+    }
+    NoteStore ..> MemoryStore : 物理隔离(不同 db)
+
+    class AgentWorker {
+        +Signal sig_token
+        +Signal sig_tool_started
+        +Signal sig_tool_finished
+        +Signal sig_confirm_needed
+        +Signal sig_status
+        +Signal sig_engine_changed
+        +Signal sig_finished
+        +Signal sig_error
+        +str user_text
+        +TurnContext ctx
+        +run() void
+        +cancel() void
+    }
+    class MainWindow {
+        +AgentWorker worker
+        +ChatView chat
+        +TraceView trace
+        +on_confirm_needed(req) void
+        +on_tool_finished(dict) void
+        +on_finished(dict) void
+        +submit(text) void
+        +stop() void
+    }
+    MainWindow o-- AgentWorker : owns
+    AgentWorker ..> ConfirmationGate : ask/resolve

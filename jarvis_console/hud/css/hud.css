@@ -1,0 +1,84 @@
+/* HUD 全息蓝青玻璃拟态样式。颜色由 skins.js 注入的 CSS 变量驱动。 */
+:root {
+  --jarvis-bg: rgba(8, 16, 26, 0.72);
+  --jarvis-glass: rgba(20, 40, 64, 0.42);
+  --jarvis-border: rgba(90, 200, 255, 0.35);
+  --jarvis-accent: #5ad1ff;
+  --jarvis-text: #d6f1ff;
+  --jarvis-state: #3fa9ff; /* 随四态变化 */
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #05080d; }
+body {
+  font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif;
+  color: var(--jarvis-text);
+  user-select: none;
+}
+
+#hud {
+  position: relative;
+  width: 100vw; height: 100vh;
+  background:
+    radial-gradient(ellipse at 50% 38%, rgba(30, 90, 150, 0.25), transparent 60%),
+    linear-gradient(160deg, #04070c 0%, #07101c 55%, #04070c 100%);
+}
+
+/* 顶栏 */
+#topbar {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 22px;
+  background: var(--jarvis-glass);
+  border-bottom: 1px solid var(--jarvis-border);
+  backdrop-filter: blur(8px);
+  z-index: 5;
+}
+.badge {
+  font-weight: 700; letter-spacing: 1px;
+  color: var(--jarvis-accent);
+  text-shadow: 0 0 8px var(--jarvis-border);
+}
+.sys { display: flex; gap: 16px; font-size: 13px; opacity: 0.92; }
+.sys span { padding: 2px 8px; border: 1px solid var(--jarvis-border); border-radius: 6px; }
+.sys .warn { color: #ffcf6b; border-color: #ffcf6b; }
+
+/* 中央舞台 */
+#stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+#coreCanvas { width: min(56vh, 520px); height: min(56vh, 520px); }
+#subtitle {
+  position: absolute; bottom: 16%;
+  max-width: 70vw; text-align: center;
+  font-size: 22px; line-height: 1.5;
+  text-shadow: 0 0 10px var(--jarvis-state);
+  transition: opacity 0.3s;
+}
+
+/* 3D 演示层 */
+#demoLayer { position: absolute; inset: 0; z-index: 8; }
+#demoLayer.hidden { display: none; }
+#demoCanvas { width: 100%; height: 100%; }
+#demoHint {
+  position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+  font-size: 12px; opacity: 0.6; pointer-events: none;
+}
+
+/* 底栏 */
+#bottombar {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 22px;
+  background: var(--jarvis-glass);
+  border-top: 1px solid var(--jarvis-border);
+  backdrop-filter: blur(8px);
+  z-index: 5;
+}
+.mic { font-weight: 600; color: var(--jarvis-state); text-shadow: 0 0 8px var(--jarvis-state); }
+#textInput {
+  flex: 1; background: rgba(0,0,0,0.35); border: 1px solid var(--jarvis-border);
+  color: var(--jarvis-text); border-radius: 8px; padding: 8px 12px; font-size: 14px;
+  outline: none;
+}
+#textInput:focus { border-color: var(--jarvis-accent); }
+
+.hidden { display: none !important; }

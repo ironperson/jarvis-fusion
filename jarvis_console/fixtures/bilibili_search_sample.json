@@ -1,0 +1,31 @@
+{
+  "results": [
+    {
+      "title": "<em class=\"keyword\">AI</em> Agent 从零到实战",
+      "author": "小王科技",
+      "play": 12800000,
+      "bvid": "BV1AI0000001",
+      "duration": "18:32",
+      "pubdate": 1770000000,
+      "pic": "https://i0.hdslb.com/sample1.jpg"
+    },
+    {
+      "title": "本地大模型部署完整指南",
+      "author": "数据工坊",
+      "play": 8600000,
+      "bvid": "BV1AI0000002",
+      "duration": "26:15",
+      "pubdate": 1769000000,
+      "pic": "https://i0.hdslb.com/sample2.jpg"
+    },
+    {
+      "title": "普通人如何用 AI 提升效率",
+      "author": "效率研究所",
+      "play": 5300000,
+      "bvid": "BV1AI0000003",
+      "duration": "12:06",
+      "pubdate": 1768000000,
+      "pic": "https://i0.hdslb.com/sample3.jpg"
+    }
+  ]
+}

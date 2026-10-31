@@ -1,0 +1,23 @@
+PySide6>=6.6,<7
+PyYAML>=6.0
+trafilatura>=2.3
+pytest>=8.0
+requests>=2.31
+numpy>=1.26
+psutil>=5.9
+edge-tts==7.3.1
+sherpa-onnx==1.12.40
+
+# —— 新增（语音/音频，融合版 JARVIS v1）——
+sounddevice>=0.4.6           # 麦克风采集（PortAudio）
+webrtcvad>=3.0.4             # VAD/能量检测，实现 barge-in 与免唤醒追问
+resemblyzer>=0.1.1           # 本地轻量声纹（d-vector），无密钥
+
+# —— 可选（仅当选合规 Piper 英式时启用，默认不装）——
+# piper-tts>=1.2
+# onnxruntime>=1.16
+
+# —— 打包（外部工具，非运行时 pip 依赖）——
+# PyInstaller>=6.0          # 出 exe（platform/win/jarvis.spec）
+# Inno Setup 6              # Windows 安装器（platform/win/build.iss），单独获取
+

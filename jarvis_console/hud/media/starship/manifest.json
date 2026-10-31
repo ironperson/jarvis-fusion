@@ -1,0 +1,8 @@
+{
+  "id": "starship",
+  "label": "星舰发射回收",
+  "description": "中央箭体 + 整流罩 + 一对助推器与喷焰，呈现发射上浮与回收脉动。",
+  "script": "demos/starship.js",
+  "entry": "starship",
+  "keywords": ["火箭", "星舰", "发射", "回收", "太空"]
+}

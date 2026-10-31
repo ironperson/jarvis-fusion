@@ -1,0 +1,15 @@
+# 核心依赖（当前环境已验证可装）
+PyYAML
+requests
+numpy
+trafilatura          # 网页正文抽取（优先）；未装时自动回退 stdlib 兜底
+chromadb             # 向量库（可选）；未装时自动回退内置 numpy+SQLite 库
+fastapi
+uvicorn
+# M3/M4 后续需要
+playwright           # 小红书/抖音 浏览器自动化（可选）
+faster-whisper       # 抖音视频 ASR（可选，已装 1.2.1）
+opencv-python-headless  # 关键帧提取（可选，已装 5.0）
+imageio-ffmpeg      # 提供 ffmpeg 二进制（抽音频/抽帧，已装 0.7）
+# 注意：本工程并发用标准库 ThreadPoolExecutor、自唤醒用标准库 cron 循环，
+# 因此 aiohttp / apscheduler 非必需；若偏好可用 APScheduler 替换 run.py。

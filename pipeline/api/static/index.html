@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>贾维斯 · 知识库看板</title>
+<style>
+  :root {
+    --bg: #0f1419; --panel: #1a2230; --panel2: #222c3c; --line: #2c3a4f;
+    --text: #e6edf3; --muted: #8b9bb0; --accent: #4ea1ff; --accent2: #34d399;
+    --warn: #fbbf24; --bad: #f87171; --good: #34d399;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", Segoe UI, sans-serif; }
+  header { padding: 18px 24px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  .wrap { padding: 20px 24px; max-width: 1100px; margin: 0 auto; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 14px; margin-bottom: 22px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .card .k { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+  .card .v { font-size: 26px; font-weight: 700; }
+  .card .v.sm { font-size: 16px; font-weight: 600; }
+  .section { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 20px; }
+  .section h2 { font-size: 15px; margin: 0 0 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+  .b-done { background: rgba(52,211,153,.15); color: var(--good); }
+  .b-failed { background: rgba(248,113,113,.15); color: var(--bad); }
+  .b-running { background: rgba(78,161,255,.15); color: var(--accent); }
+  .b-idle { background: rgba(139,155,176,.15); color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  td .url { color: var(--muted); font-size: 12px; word-break: break-all; }
+  .row-done td:first-child { border-left: 3px solid var(--good); }
+  .row-failed td:first-child { border-left: 3px solid var(--bad); }
+  .search { display: flex; gap: 10px; margin-bottom: 14px; }
+  .search input { flex: 1; background: var(--panel2); border: 1px solid var(--line); color: var(--text);
+    padding: 10px 12px; border-radius: 8px; font-size: 14px; outline: none; }
+  .search input:focus { border-color: var(--accent); }
+  button { background: var(--accent); color: #06121f; border: none; padding: 10px 16px; border-radius: 8px;
+    font-size: 14px; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.ghost { background: var(--panel2); color: var(--text); border: 1px solid var(--line); }
+  .results .item { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; background: var(--panel2); }
+  .results .item .t { font-weight: 600; margin-bottom: 4px; }
+  .results .item .meta { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .results .item .snip { font-size: 13px; color: var(--text); opacity: .85; line-height: 1.5; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .chip { font-size: 12px; background: var(--panel2); border: 1px solid var(--line); padding: 4px 10px; border-radius: 8px; }
+  .empty { color: var(--muted); font-size: 13px; padding: 10px 0; }
+  .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛰️ 贾维斯 · 知识库看板</h1>
+  <span class="sub">采集 → 整理 → 入知识库 · 本地优先 / 云端仅摘要</span>
+</header>
+
+<div class="wrap">
+  <div class="grid" id="statsGrid"></div>
+
+  <div class="section">
+    <h2>采集任务流 <span class="badge b-idle" id="runBadge">idle</span></h2>
+    <div class="toolbar" style="margin-bottom:14px;">
+      <span style="color:var(--muted);font-size:13px;">手动触发：</span>
+      <span id="triggerBtns" class="chips"></span>
+    </div>
+    <table>
+      <thead><tr><th>状态</th><th>来源</th><th>URL</th><th>错误</th><th>更新</th></tr></thead>
+      <tbody id="taskBody"><tr><td colspan="5" class="empty">加载中…</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>语义检索（bge-m3）</h2>
+    <div class="search">
+      <input id="q" placeholder="输入查询，例如：如何组织我的个人知识？" onkeydown="if(event.key==='Enter')doSearch()">
+      <button onclick="doSearch()">检索</button>
+    </div>
+    <div class="results" id="results"><div class="empty">输入关键词后点击检索。</div></div>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const fmt = (n) => (n == null ? 0 : n);
+
+async function loadStats() {
+  const s = await (await fetch('/api/stats')).json();
+  const g = $('#statsGrid');
+  const bySrc = Object.entries(s.notes_by_source || {}).map(([k,v]) => `${k}: ${v}`).join(' · ') || '—';
+  const todaySrc = Object.entries(s.collected_by_source_today || {}).map(([k,v]) => `${k}: ${v}`).join(' · ') || '—';
+  g.innerHTML = `
+    <div class="card"><div class="k">笔记总数</div><div class="v">${fmt(s.total_notes)}</div></div>
+    <div class="card"><div class="k">今日采集</div><div class="v">${fmt(s.today_collected)}</div><div class="k" style="margin-top:6px">${todaySrc}</div></div>
+    <div class="card"><div class="k">任务·成功/失败</div><div class="v sm">${fmt(s.tasks_done)} <span style="color:var(--bad)">/ ${fmt(s.tasks_failed)}</span></div></div>
+    <div class="card"><div class="k">各源笔记数</div><div class="v sm">${bySrc}</div></div>
+  `;
+  const lr = s.last_run || {};
+  const badge = $('#runBadge');
+  const st = lr.status || 'idle';
+  badge.className = 'badge ' + (st === 'running' ? 'b-running' : st === 'done' ? 'b-done' : st === 'error' ? 'b-failed' : 'b-idle');
+  badge.textContent = st + (lr.source ? ' · ' + lr.source : '');
+}
+
+async function loadTasks() {
+  const rows = await (await fetch('/api/tasks?limit=100')).json();
+  const tb = $('#taskBody');
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="5" class="empty">暂无任务。可手动触发采集。</td></tr>'; return; }
+  tb.innerHTML = rows.map(r => {
+    const cls = r.status === 'done' ? 'row-done' : r.status === 'failed' ? 'row-failed' : '';
+    const bcls = r.status === 'done' ? 'b-done' : r.status === 'failed' ? 'b-failed' : 'b-running';
+    return `<tr class="${cls}">
+      <td><span class="badge ${bcls}">${r.status}</span></td>
+      <td>${r.source || ''}</td>
+      <td><span class="url">${r.url || ''}</span></td>
+      <td>${r.error ? '<span style="color:var(--bad)">'+r.error+'</span>' : ''}</td>
+      <td style="color:var(--muted);font-size:12px">${(r.updated_at||'').slice(0,19).replace('T',' ')}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadSources() {
+  const src = await (await fetch('/api/sources')).json();
+  const box = $('#triggerBtns');
+  box.innerHTML = src.map(s =>
+    `<button class="ghost" data-src="${s.name}" ${s.enabled?'':'disabled'} title="${s.enabled?'':'sources.yaml 未启用'}">${s.name}${s.enabled?'':' ✕'}</button>`
+  ).join('');
+  box.querySelectorAll('button').forEach(b => b.onclick = () => trigger(b.dataset.src));
+}
+
+async function trigger(src) {
+  const r = await (await fetch('/api/trigger?source=' + src, {method:'POST'})).json();
+  if (r.ok) { await loadStats(); }
+  else { alert(r.error || '触发失败'); }
+}
+
+async function doSearch() {
+  const q = $('#q').value.trim();
+  if (!q) return;
+  const res = await (await fetch('/api/items?q=' + encodeURIComponent(q) + '&topk=8')).json();
+  const box = $('#results');
+  if (!res.length) { box.innerHTML = '<div class="empty">无结果。</div>'; return; }
+  box.innerHTML = res.map(h => `
+    <div class="item">
+      <div class="t">${h.title || '(无标题)'}</div>
+      <div class="meta">来源 ${h.source||''} · 相似度 ${h.score} ${h.url?('· <a style="color:var(--accent)" href="'+h.url+'" target="_blank">原文</a>'):''}</div>
+      <div class="snip">${h.snippet || ''}</div>
+    </div>`).join('');
+}
+
+async function refresh() { await loadStats(); await loadTasks(); }
+(async () => {
+  await loadSources();
+  await refresh();
+  setInterval(refresh, 5000);  // 每 5 秒轮询任务流与统计
+})();
+</script>
+</body>
+</html>

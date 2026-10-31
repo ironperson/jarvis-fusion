@@ -1,0 +1,52 @@
+web:
+  enabled: true
+  cron: "0 3 * * *"              # 每天 03:00（先每天 1 次起步）
+  seeds:
+    - "https://www.xinhuanet.com/"
+    - "https://www.people.com.cn/"
+    - "https://github.com/"
+  parser: "trafilatura"
+  timeout: 30
+  concurrency: 4
+  discover_links: false
+  max_pages: 20
+  verify_ssl: true              # 生产机保持 true；仅当处于 MITM 代理环境且证书不被信任时临时改 false
+  # 镜像回退：抓取某域名失败时，自动改用镜像域名重试（国内访问 GitHub 不稳时的兜底）。
+  # 候选镜像（2026 实测可用类）：bgithub.xyz / kkgithub.com / kgithub.com / gitclone.com / github.ur1.fun
+  mirror_map:
+    "github.com": "kkgithub.com"
+
+xiaohongshu:
+  enabled: true                  # M3 已启用；首次运行需交互登录（自动保存 Cookie 到 cookie_path）
+  cron: "0 4 * * *"              # 每天 04:00（先每天 1 次起步，与 web 错开）
+  cookie_path: "D:/Desktop/MyKnowledge/cookies/xhs.json"   # 登录态持久化（首次无 Cookie 会打开浏览器让你登录）
+  headless: true                 # 定时任务用 true；首次交互登录会自动切到 false
+  # 采集模式：优先用「指定笔记 URL 列表」，最稳、最低风控风险。
+  # 把下面的示例换成你真正想入库的小红书笔记链接（每条一行）。
+  note_urls:
+    - "https://www.xiaohongshu.com/explore/6ac8e41e000000000201345a?xsec_token=ABdzM-kNIywZKiN54JqOjePcJJ04QgohyslC8EMaTKnmg=&xsec_source=pc_feed"
+    - "https://www.xiaohongshu.com/explore/6ad37038000000001303dfad?xsec_token=ABKhyGDlPCq2qIUOtWuGWVnItrnZCnqyqaJMuVMuN03ho=&xsec_source=pc_feed"
+  # 关键词搜索（高风险，默认关闭）：开启会把搜索结果前 N 条逐条抓取，易触发风控。
+  keywords: []
+  search_limit: 5
+  # 反爬限频：单并发串行，每次抓取后随机延时（秒）。宁可慢，别被限流。
+  min_delay: 5
+  max_delay: 15
+
+douyin:
+  enabled: true                  # 改成 true 即可开启
+  cron: "30 4 * * *"             # 每天 04:30 自唤醒（与 web/小红书错开）
+  local_dir: "D:/Desktop/MyKnowledge/douyin_videos"   # 上面的视频文件夹
+  work_dir: "D:/Desktop/MyKnowledge/douyin_work"      # 处理中间产物（关键帧持久化到此）
+  asr_model_size: "base"         # tiny/base/small；显存够用 small 更准
+  language: "zh"
+  keep_audio: false              # true 则保留抽取的 wav（占空间）
+  keyframes: 4                   # 均匀提取几张关键帧
+  # vision_model: ""             # 可选：本地视觉模型给关键帧配文；空=仅留附件
+  keywords: ["知识科普"]
+  share_links: []                # 进阶：分享链接自动抓取（默认不启用，见下）
+  # —— 进阶接口（默认不启用）：分享链接自动抓取 ——
+  # 抖音强风控，通用下载极不稳定，建议用上面的本地文件模式。
+  # 如需启用链接抓取，把链接填入 share_links 并参考 docs 配置登录态/Playwright。
+  share_links: []
+  cookie_path: "D:/Desktop/MyKnowledge/cookies/douyin.bin"

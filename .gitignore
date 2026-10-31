@@ -1,0 +1,46 @@
+# —— Python ——
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# —— 构建产物 ——
+dist/
+.build/
+build/
+installer/
+*.spec.bak
+
+# —— 模型与数据（体积大，不入库）——
+jarvis_console/models/
+*.onnx
+*.tar.bz2
+
+# —— 日志与密钥 ——
+*.log
+.env
+.env.*
+!.env.example
+
+# —— 系统 ——
+Thumbs.db
+.DS_Store
+
+# —— 测试临时产物（含伪造密钥夹具，绝不入库）——
+.pytest_*/
+.pytest_cache/
+__pycache__/
+
+# —— 运行期日志 ——
+logs/
+jarvis_console/logs/
+
+# —— 与本产品无关的独立项目线（各自独立仓库）——
+jarvis/
+jarvis-mp/
+
+# —— 本地项目记忆（非代码，不入版本库）——
+.workbuddy/
+
+# —— 误生成的空设备名文件 ——
+nul

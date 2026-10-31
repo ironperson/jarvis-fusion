@@ -1,0 +1,140 @@
+llm:
+  mode: "auto"
+  disable_thinking: true
+  timeout_seconds: 120
+  fail_threshold: 2
+  deepseek:
+    base_url: "https://api.deepseek.com"
+    model: "deepseek-flash"
+  ollama:
+    base_url: "http://localhost:11434"
+    model: "qwen3-14b"
+
+tools:
+  enabled:
+    - search_bilibili
+    - web_search
+    - fetch_page
+    - knowledge_search
+    - ingest_note
+    - system_status
+    - list_processes
+    - close_app
+    - find_files
+    - read_file
+    - write_file
+    - delete_file
+    - mihome_control
+    - amap_weather
+    - amap_route
+    - douyin_creator_stats
+    - set_reminder
+    - list_reminders
+    - cancel_reminder
+  disabled:
+    - douyin_asr
+  douyin_asr:
+    enabled: false
+
+# 多服务商大脑路由（N 路优先级）。default 为主引擎；auto=true 时云端不可达自动降级。
+# env_key 只用于判定“是否已配置”，UI/日志绝不回显密钥值。
+providers:
+  default: "deepseek"
+  auto: true
+  entries:
+    deepseek:
+      label: "DeepSeek"
+      base_url: "https://api.deepseek.com"
+      model: "deepseek-chat"
+      env_key: "DEEPSEEK_API_KEY"
+      priority: 10
+      needs_key: true
+    qwen:
+      label: "通义千问"
+      base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+      model: "qwen-plus"
+      env_key: "DASHSCOPE_API_KEY"
+      priority: 20
+      needs_key: true
+    kimi:
+      label: "Kimi"
+      base_url: "https://api.moonshot.cn/v1"
+      model: "moonshot-v1-8k"
+      env_key: "MOONSHOT_API_KEY"
+      priority: 30
+      needs_key: true
+    zhipu:
+      label: "智谱 GLM"
+      base_url: "https://open.bigmodel.cn/api/paas/v4"
+      model: "glm-4-flash"
+      env_key: "ZHIPU_API_KEY"
+      priority: 40
+      needs_key: true
+    openai:
+      label: "OpenAI"
+      base_url: "https://api.openai.com/v1"
+      model: "gpt-4o-mini"
+      env_key: "OPENAI_API_KEY"
+      priority: 50
+      needs_key: true
+    ollama:
+      label: "Ollama 本地"
+      base_url: "http://localhost:11434/v1"
+      model: "qwen3-14b"
+      env_key: ""
+      priority: 90
+      needs_key: false
+
+safety:
+  trust_mode: false
+  confirmation_timeout_seconds: 300
+  # 读取拒绝清单：命中这些文件一律拒绝读取（防密钥随上下文外发云端）。
+  # 形如 "*.pem" 的是文件名模式（fnmatch）；形如 "~/.ssh/" 的是目录前缀规则。
+  # 注意：~/.ssh 是不可关闭的安全底线，即使本清单置空也照样拒绝；
+  #       其余条目置空即可放开（不建议：放开后模型可读取本机密钥文件）。
+  read_denylist:
+    - ".env"
+    - ".env.*"
+    - "*.key"
+    - "*.pem"
+    - "*.p12"
+    - "*.pfx"
+    - "id_rsa"
+    - "id_rsa.*"
+    - "id_ed25519"
+    - "id_ed25519.*"
+    - "id_dsa"
+    - "id_ecdsa"
+    - ".npmrc"
+    - ".pypirc"
+    - ".netrc"
+    - ".htpasswd"
+    - ".git-credentials"
+    - "*.keystore"
+    - "*.jks"
+    - "*serviceaccount*.json"
+    - "*service_account*.json"
+    - "*service-account*.json"
+    - "*accountkey*.json"
+    - "credentials"
+    - "credentials.*"
+    - "secrets.json"
+    - "token.json"
+    - "~/.ssh/"
+    - "~/.jarvis/"
+
+memory:
+  enabled: true
+  recall_top_k: 3
+  auto_extract: true
+
+ui:
+  speech_enabled: true
+  voice: "en-GB-SoniaNeural"
+  tts_backend: "edge"
+  long_speech_threshold: 200
+  summary_max_chars: 80
+  max_rounds: 8
+  default_skin: "jarvis"
+
+log_level: "INFO"
