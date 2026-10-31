@@ -111,6 +111,13 @@ jobs:
           "SIGNTOOL=$signtool" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "signtool: $signtool"
 
+      - name: Remove obsolete 'typing' backport (blocks PyInstaller on windows-latest)
+        shell: pwsh
+        run: |
+          # windows-latest 预装了过时的 typing 反向移植包，PyInstaller 6.x 检测到会直接报错退出。
+          # 它是 Python 2 时代的遗留物，Python 3.11 的 typing 已在标准库，卸载无害。
+          python -m pip uninstall -y typing 2>$null
+
       - name: Build exe (PyInstaller, onedir)
         shell: pwsh
         run: |
